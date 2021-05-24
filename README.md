@@ -11,7 +11,7 @@ from python_falcon_lambda import lambda_handler
 lambda_handler = lambda_handler(api)
 ```
 
-##### 2. Build the lambda zip
+##### 2. Build dependencies for AWS Lambda runner
 Create the docker builder
 ```shell
 $ cd python-falcon-lambda/builder && \
@@ -27,24 +27,35 @@ $ # Actually build
 $ docker run -v $(pwd):/workdir \
     --platform linux/amd64 lambda-docker-builder
 ```
-It will generate a `build/lambda.zip` file
+It will generate a `build/package` directory with all the dependencies built for the AWS Lambda runner.
 
-##### 3. Deploy
+##### 3. Build package
+Build a `build/lambda.zip` archive with the content of the 
+```shell
+# Append dependencies to zip archive. 
+# Move to the directory is required to avoid the creation of 
+# a root directory in archive
+$ cd build/packages
+$ zip -r ../../build/lambda.zip *
+# Move back to project and append the required files to the archive
+$ cd ../..
+$ zip -r build/lambda.zip * \
+    -x "venv/*" "__pycache__/*" "bin/*" ".idea/*" "build/*" ".terraform/*"
+$ zip -r build/lambda.zip lambda_function.py
+```
+
+##### 4. Deploy
 Prepare the deployment
-```deployment.tf
+```tf
 provider "aws" {
   region = "eu-west-1"
-}
-
-variable "lambda_version" {
-  type = string
 }
 
 module "api" {
   source = "git:///python-falcon-lambda/terraform"
 
-  lambda_bucket_name = "bucket-name"
-  lambda_version = var.lambda_version
+  lambda_bucket_name = "shared-lambda-bucket-name"
+  lambda_version = "v0.1.0"
 
   lambda_folder = "./"
 }
