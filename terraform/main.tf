@@ -17,31 +17,7 @@ locals {
   ])
 }
 
-resource "null_resource" "zip_file" {
 
-  count = 0
-
-  triggers = {
-    version = var.lambda_version
-  }
-
-  provisioner "local-exec" {
-    command = <<-EOT
-    cd ${var.lambda_folder}
-    rm -rf /build/packages /build/venv /build/${local.zip_filename}
-    virtualenv -p ${var.lambda_runtime} build/venv
-    source build/venv/bin/activate
-    pip install -r requirements.txt --target build/packages
-    cd build/packages
-    zip -r ../../${local.zip_filename} *
-    cd ../..
-    zip -r ${local.zip_filename} * -x "venv/*" "__pycache__/*" "bin/*" ".idea/*" "build/*"
-    deactivate
-    EOT
-
-    interpreter = ["/bin/bash", "-c"]
-  }
-}
 
 #### IAM Permissions
 
