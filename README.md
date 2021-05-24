@@ -55,8 +55,8 @@ module "api" {
   source = "git:///python-falcon-lambda/terraform"
 
   lambda_bucket_name = "shared-lambda-bucket-name"
+  lambda_name = "my-lambda"
   lambda_version = "v0.1.0"
-
   lambda_folder = "./"
 }
 

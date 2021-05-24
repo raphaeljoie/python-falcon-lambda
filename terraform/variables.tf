@@ -13,23 +13,21 @@ variable "tags" {
 
 #### IAM for Lambda policies
 
+variable "lambda_iam_role_arn" {
+  type = string
+  default = null
+}
+
 variable "lambda_iam_role" {
   description = "Name of the IAM role used for the Lambda function"
   type        = string
-  default     = "ApiLambdaRole"
+  default     = null
 }
-
-variable "lambda_iam_policy" {
-  description = "Name of the IAM policy used for the Lambda function"
-  type        = string
-  default     = "ApiLambdaPolicy"
-}
-
 
 #### S3 Bucket
 
 variable "lambda_bucket_name" {
-  description = "S3 Bucket name to store the lambda zip"
+  description = "Name of the shared S3 bucked used to store the lambdas"
   type        = string
 }
 
@@ -81,6 +79,17 @@ variable "lambda_environment" {
   default = null
 }
 
+variable "vpc_security_group_ids" {
+  description = "For network connectivity to AWS resources in a VPC, specify a list of security groups in the VPC. When you connect a function to a VPC, it can only access resources and the internet through that VPC."
+  type = list(string)
+  default = []
+}
+
+variable "vpc_subnet_ids" {
+  description = "For network connectivity to AWS resources in a VPC, specify a list of subnets in the VPC. When you connect a function to a VPC, it can only access resources and the internet through that VPC."
+  type = list(string)
+  default = []
+}
 
 #### API Gateway
 

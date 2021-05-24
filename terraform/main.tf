@@ -18,16 +18,15 @@ locals {
 }
 
 
-
-#### IAM Permissions
-
-resource "aws_cloudwatch_log_group" "lambda_log_group" {
-  name              = "/aws/lambda/${var.lambda_name}"
-  retention_in_days = 14
-}
+################################################################################
+# IAM PERMISSIONS
+################################################################################
 
 resource "aws_iam_role" "lambda_role" {
-  name = var.lambda_iam_role
+  # Only create a dedicated role if no role arn is provided
+  count = var.lambda_iam_role_arn != null ? 0 : 1
+
+  name = var.lambda_iam_role != null ? var.lambda_iam_role : "AWSLambdaVPCAccessExecutionRole-${var.lambda_name}"
 
   assume_role_policy = <<EOF
 {
@@ -45,42 +44,32 @@ resource "aws_iam_role" "lambda_role" {
 EOF
 }
 
-resource "aws_iam_policy" "lambda_policy" {
-  name        = var.lambda_iam_policy
-  path        = "/"
-  description = "IAM policy for the lambda function ' ${var.lambda_name} '"
-
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-    "Statement": [
-        {
-          "Action": [
-              "logs:CreateLogStream",
-              "logs:PutLogEvents"
-          ],
-          "Resource": "arn:aws:logs:*:*:*",
-          "Effect": "Allow"
-        }
-    ]
-}
-EOF
-}
-
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
-  role       = aws_iam_role.lambda_role.name
-  policy_arn = aws_iam_policy.lambda_policy.arn
+  count = var.lambda_iam_role_arn != null ? 0 : 1
+
+  role       = aws_iam_role.lambda_role[0].name
+  policy_arn = data.aws_iam_policy.aws_lambda_execute_policy.arn
 }
 
-#### LAMBDA FUNCTION
+data "aws_iam_policy" "aws_lambda_execute_policy" {
+  arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+
+################################################################################
+# LAMBDA FUNCTION
+################################################################################
+
+resource "aws_cloudwatch_log_group" "lambda_log_group" {
+  # Explicitly create Log group to enforce custom retention time
+  name              = "/aws/lambda/${var.lambda_name}"
+  retention_in_days = 14
+}
+
 resource "aws_s3_bucket_object" "lambda_version" {
   bucket = var.lambda_bucket_name
   key = "${var.lambda_name}/${var.lambda_version}/${local.zip_filename}"
   source = "${var.lambda_folder}/${local.zip_filename}"
-
-  depends_on = [
-    null_resource.zip_file
-  ]
 }
 
 resource "aws_lambda_function" "lambda" {
@@ -93,7 +82,7 @@ resource "aws_lambda_function" "lambda" {
   handler = var.lambda_handler
   timeout = var.lambda_timeout
 
-  role = aws_iam_role.lambda_role.arn
+  role = var.lambda_iam_role_arn != null ? var.lambda_iam_role_arn : aws_iam_role.lambda_role[0].arn
 
   dynamic "environment" {
     for_each = local.environment_map
@@ -104,10 +93,17 @@ resource "aws_lambda_function" "lambda" {
 
   tags = var.tags
 
+  vpc_config {
+    security_group_ids = var.vpc_security_group_ids
+    subnet_ids = var.vpc_subnet_ids
+  }
+
   depends_on = [
+    # Make sure it can write logs before it starts
     aws_iam_role_policy_attachment.lambda_logs,
+    # Make sure the custom log group is created before, or a default retention period is used
     aws_cloudwatch_log_group.lambda_log_group,
-    null_resource.zip_file,
+    # Make sure the S3 object exists before the creation
     aws_s3_bucket_object.lambda_version
   ]
 
@@ -118,9 +114,13 @@ resource "aws_lambda_function" "lambda" {
   }
 }
 
-#### API GATEWAY
+
+################################################################################
+# API GATEWAY
+################################################################################
+
 resource "aws_api_gateway_rest_api" "api" {
-  name = var.api_name
+  name = var.api_name != null ? var.api_name : "${var.lambda_name}-api"
 
   tags = var.tags
 }

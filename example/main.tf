@@ -2,10 +2,6 @@ provider "aws" {
   region = "eu-west-1"
 }
 
-variable "lambda_version" {
-  type = string
-}
-
 resource "aws_s3_bucket" "bucket" {
   bucket = "r-lambda-functions"
 }
@@ -14,16 +10,12 @@ resource "aws_s3_bucket" "bucket" {
 module "api" {
   source = "../terraform"
 
-  lambda_iam_role   = "terraform2-lambda-role"
-  lambda_iam_policy = "terraform2-lambda-policy"
-
   lambda_bucket_name = aws_s3_bucket.bucket.bucket
-  lambda_version = var.lambda_version
-
-  lambda_name   = "terraform2-test"
+  # Take the version from the VERSION file. Could be taken from git tag, or variable, or ...
+  lambda_version = file("VERSION")
+  lambda_name   = "w-store"
   lambda_folder = "./"
 
-  api_name = "terraform2-api"
   api_endpoints = [
     {
       name = "car",
