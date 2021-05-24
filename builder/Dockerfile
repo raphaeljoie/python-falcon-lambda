@@ -1,7 +1,6 @@
-FROM ubuntu:18.04
+FROM python:3.8-buster
 
 RUN apt-get update
-RUN apt-get install -y python3.8
 RUN apt-get install -y virtualenv
 RUN apt-get install -y zip
 

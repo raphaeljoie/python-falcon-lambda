@@ -54,3 +54,6 @@ output "api_url" {
 }
 ```
 and `terraform apply`
+
+## TODO
+* Docker builder is using python3.8 => should use the same for lambda runner
