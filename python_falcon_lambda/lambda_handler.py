@@ -47,8 +47,6 @@ class Request(dict):
 
     def __init__(self, event, context):
         super().__init__()
-        print(event)
-        print(context)
 
         body = (event.get('body') or '').encode('utf-8')
         headers = {
