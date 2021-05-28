@@ -1,7 +1,26 @@
 # Deploy Python Falcon in AWS Lambda
 
 ##### 1. create the lambda handler
-Create a python-falcon API in `service.py` as usual, and import it in a `lambda_function.py` file
+Create a [Falcon](https://falcon.readthedocs.io/en/stable/) API in `service.py`,
+```py
+# service.py
+class QuoteResource:
+    def on_get(self, req, resp):
+        quote = {
+            'quote': "Blabetiblou",
+            'author': 'Raphaël JOIE'
+        }
+
+        resp.media = quote
+
+api = falcon.App()
+api.add_route('/quote', QuoteResource())
+```
+```
+# requirements.txt
+falcon
+```
+and import the API in a `lambda_function.py` file
 ```py
 # lambda_function.py
 
@@ -11,23 +30,16 @@ from python_falcon_lambda import lambda_handler
 lambda_handler = lambda_handler(api)
 ```
 
-##### 2. Build dependencies for AWS Lambda runner
-Create the docker builder
+##### 2. Build the lambda zip
+Run [Python Lambda Builder](https://github.com/raphaeljoie/python-lambda-builder) to package
 ```shell
-$ cd python-falcon-lambda/builder && \
-  docker buildx build \
+$ docker run \
+    --volume $(pwd):/workdir \
     --platform linux/amd64 \
-    --tag lambda-docker-builder . 
+    raphaeljoie/python-lambda-builder \
+    ".terraform/*"
 ```
-And build
-```shell
-# Move back to project root and ensure build directory
-$ cd ../../ && mkdir build
-$ # Actually build
-$ docker run -v $(pwd):/workdir \
-    --platform linux/amd64 lambda-docker-builder
-```
-It will generate a `build/package` directory with all the dependencies built for the AWS Lambda runner.
+to generate `build/lambda.zip`
 
 ##### 3. Build package
 Build a `build/lambda.zip` archive with the content of the 
