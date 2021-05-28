@@ -96,7 +96,7 @@ variable "vpc_subnet_ids" {
 variable "api_name" {
   description = "A name for the API Gateway"
   type        = string
-  default     = "api-gateway"
+  default     = null
 }
 
 variable "api_endpoints" {
