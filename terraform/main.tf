@@ -48,11 +48,22 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
   count = var.lambda_iam_role_arn != null ? 0 : 1
 
   role       = aws_iam_role.lambda_role[0].name
+  policy_arn = data.aws_iam_policy.aws_lambda_logs_policy.arn
+}
+
+data "aws_iam_policy" "aws_lambda_logs_policy" {
+  arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_execute" {
+  count = var.lambda_iam_role_arn != null ? 0 : 1
+
+  role       = aws_iam_role.lambda_role[0].name
   policy_arn = data.aws_iam_policy.aws_lambda_execute_policy.arn
 }
 
 data "aws_iam_policy" "aws_lambda_execute_policy" {
-  arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+  arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaRole"
 }
 
 
