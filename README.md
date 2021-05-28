@@ -41,22 +41,7 @@ $ docker run \
 ```
 to generate `build/lambda.zip`
 
-##### 3. Build package
-Build a `build/lambda.zip` archive with the content of the 
-```shell
-# Append dependencies to zip archive. 
-# Move to the directory is required to avoid the creation of 
-# a root directory in archive
-$ cd build/packages
-$ zip -r ../../build/lambda.zip *
-# Move back to project and append the required files to the archive
-$ cd ../..
-$ zip -r build/lambda.zip * \
-    -x "venv/*" "__pycache__/*" "bin/*" ".idea/*" "build/*" ".terraform/*"
-$ zip -r build/lambda.zip lambda_function.py
-```
-
-##### 4. Deploy
+##### 3. Deploy
 Prepare the deployment
 ```tf
 provider "aws" {
@@ -69,7 +54,6 @@ module "api" {
   lambda_bucket_name = "shared-lambda-bucket-name"
   lambda_name = "my-lambda"
   lambda_version = "v0.1.0"
-  lambda_folder = "./"
 }
 
 output "api_url" {
