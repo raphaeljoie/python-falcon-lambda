@@ -29,6 +29,7 @@ variable "lambda_iam_role" {
 variable "lambda_bucket_name" {
   description = "Name of the shared S3 bucked used to store the lambdas"
   type        = string
+  default     = null
 }
 
 variable "lambda_version" {

@@ -62,8 +62,27 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   retention_in_days = 14
 }
 
+resource "random_id" "bucket_name_rand" {
+  count = var.lambda_bucket_name == null ? 1 : 0
+
+  keepers = {
+    # Generate a new id each time we switch to a new lambda name
+    lambda_name = var.lambda_name
+  }
+
+  byte_length = 8
+}
+
+resource "aws_s3_bucket" "bucket" {
+  count = var.lambda_bucket_name == null ? 1 : 0
+
+  acl = "private"
+
+  bucket = "lambda-${var.lambda_name}-${random_id.bucket_name_rand[0].hex}"
+}
+
 resource "aws_s3_bucket_object" "lambda_version" {
-  bucket = var.lambda_bucket_name
+  bucket = var.lambda_bucket_name == null ? aws_s3_bucket.bucket[0].bucket : var.lambda_bucket_name
   key = "${var.lambda_name}/${var.lambda_version}/${local.zip_filename}"
   source = "${var.lambda_folder}/${local.zip_filename}"
   etag = filemd5("${var.lambda_folder}/${local.zip_filename}")
@@ -72,7 +91,7 @@ resource "aws_s3_bucket_object" "lambda_version" {
 resource "aws_lambda_function" "lambda" {
   function_name    = var.lambda_name
 
-  s3_bucket = var.lambda_bucket_name
+  s3_bucket = var.lambda_bucket_name == null ? aws_s3_bucket.bucket[0].bucket : var.lambda_bucket_name
   s3_key = "${var.lambda_name}/${var.lambda_version}/${local.zip_filename}"
   source_code_hash = filebase64sha256("${var.lambda_folder}/${local.zip_filename}")
 
