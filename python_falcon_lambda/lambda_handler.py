@@ -1,14 +1,16 @@
+import re
 import sys
+
 from io import BytesIO
 from urllib import parse
 
 
-def lambda_handler(app):
+def lambda_handler(app, path_prefix='/'):
     def handler(event, context):
         resp = Response()
 
         output = app(
-            Request(event, context),
+            Request(event, context, path_prefix),
             resp
         )
 
@@ -45,7 +47,7 @@ class Response(object):
 
 class Request(dict):
 
-    def __init__(self, event, context):
+    def __init__(self, event, context, path_prefix):
         super().__init__()
 
         body = (event.get('body') or '').encode('utf-8')
@@ -55,11 +57,13 @@ class Request(dict):
         }
 
         remote_addr, *_ = headers.get('X_FORWARDED_FOR', '127.0.0.1').partition(', ')
+        path = event['path']
+        path = re.sub(f'^{path_prefix}', '/', path)
 
         environ = {
             'SCRIPT_NAME': '',
             'REQUEST_METHOD': event['httpMethod'],
-            'PATH_INFO': event['path'],
+            'PATH_INFO': path,
             'QUERY_STRING': parse.urlencode(event['queryStringParameters'] or {},
                                             safe=','),
             'REMOTE_ADDR': remote_addr,
