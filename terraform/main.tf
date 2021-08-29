@@ -3,21 +3,6 @@ locals {
   zip_filename = "build/lambda.zip"
 }
 
-locals {
-  endpoint_list = flatten([
-    for e in var.api_endpoints : [
-      for m in e.method : {
-        name             = e.name,
-        name_with_method = "${e.name}-${m}",
-        path             = e.path,
-        method           = m,
-        parent           = e.parent
-      }
-    ]
-  ])
-}
-
-
 ################################################################################
 # IAM PERMISSIONS
 ################################################################################
@@ -123,93 +108,4 @@ resource "aws_lambda_function" "lambda" {
       source_code_hash
     ]
   }
-}
-
-
-################################################################################
-# API GATEWAY
-################################################################################
-
-resource "aws_api_gateway_rest_api" "api" {
-  name = var.api_name != null ? var.api_name : "${var.lambda_name}-api"
-
-  tags = var.tags
-}
-
-resource "aws_lambda_permission" "api" {
-  statement_id  = "AllowedAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = var.lambda_name
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
-
-  depends_on = [
-    aws_api_gateway_rest_api.api,
-    aws_lambda_function.lambda
-  ]
-}
-
-# Parent resources
-resource "aws_api_gateway_resource" "resource" {
-  for_each = { for endpoint in var.api_endpoints : endpoint.name => endpoint if endpoint.parent == "root" }
-
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  parent_id   = aws_api_gateway_rest_api.api.root_resource_id
-  path_part   = each.value.path
-}
-
-# Child resources
-resource "aws_api_gateway_resource" "child_resource" {
-  for_each = { for endpoint in var.api_endpoints : endpoint.name => endpoint if endpoint.parent != "root" }
-
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  parent_id   = aws_api_gateway_resource.resource[each.value.parent].id
-  path_part   = each.value.path
-}
-
-resource "aws_api_gateway_method" "method" {
-  for_each = { for endpoint in local.endpoint_list : endpoint.name_with_method => endpoint }
-
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  resource_id = each.value.parent == "root" ? aws_api_gateway_resource.resource[each.value.name].id : aws_api_gateway_resource.child_resource[each.value.name].id
-  http_method = each.value.method
-
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_integration" "integration" {
-  for_each = { for endpoint in local.endpoint_list : endpoint.name_with_method => endpoint }
-
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  resource_id = aws_api_gateway_method.method[each.value.name_with_method].resource_id
-  http_method = aws_api_gateway_method.method[each.value.name_with_method].http_method
-
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.lambda.invoke_arn
-}
-
-resource "aws_api_gateway_deployment" "deployment" {
-  count = length(var.api_stage_name)
-
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  stage_name  = var.api_stage_name[count.index]
-
-  triggers = {
-    redeployment = sha1(join(",", tolist(
-      [jsonencode(aws_api_gateway_integration.integration[*])],
-    )))
-  }
-
-  # Force the deployment
-  description = "Deployed at ${timestamp()}"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  depends_on = [
-    aws_api_gateway_integration.integration
-   ]
 }
