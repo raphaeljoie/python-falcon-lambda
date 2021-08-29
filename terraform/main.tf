@@ -66,6 +66,7 @@ resource "aws_s3_bucket_object" "lambda_version" {
   bucket = var.lambda_bucket_name
   key = "${var.lambda_name}/${var.lambda_version}/${local.zip_filename}"
   source = "${var.lambda_folder}/${local.zip_filename}"
+  etag = filemd5("${var.lambda_folder}/${local.zip_filename}")
 }
 
 resource "aws_lambda_function" "lambda" {
@@ -73,6 +74,7 @@ resource "aws_lambda_function" "lambda" {
 
   s3_bucket = var.lambda_bucket_name
   s3_key = "${var.lambda_name}/${var.lambda_version}/${local.zip_filename}"
+  source_code_hash = filebase64sha256("${var.lambda_folder}/${local.zip_filename}")
 
   runtime = var.lambda_runtime
   handler = var.lambda_handler
@@ -102,10 +104,4 @@ resource "aws_lambda_function" "lambda" {
     # Make sure the S3 object exists before the creation
     aws_s3_bucket_object.lambda_version
   ]
-
-  lifecycle {
-    ignore_changes = [
-      source_code_hash
-    ]
-  }
 }
