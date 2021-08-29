@@ -81,6 +81,19 @@ resource "aws_s3_bucket" "bucket" {
   bucket = "lambda-${var.lambda_name}-${random_id.bucket_name_rand[0].hex}"
 }
 
+resource "aws_s3_bucket_public_access_block" "bucket_block" {
+  # Block all public accesses to the lambda bucket
+
+  count = var.lambda_bucket_name == null ? 1 : 0
+
+  bucket = aws_s3_bucket.bucket[0].bucket
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 resource "aws_s3_bucket_object" "lambda_version" {
   bucket = var.lambda_bucket_name == null ? aws_s3_bucket.bucket[0].bucket : var.lambda_bucket_name
   key = "${var.lambda_name}/${var.lambda_version}/${local.zip_filename}"
