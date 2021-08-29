@@ -64,3 +64,4 @@ and `terraform apply`
 
 ## TODO
 * Docker builder is using python3.8 => should use the same for lambda runner
+* adapt payload v2.0 and v1.0 https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html
